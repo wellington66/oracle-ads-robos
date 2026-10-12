@@ -1,0 +1,21 @@
+name: Parear WhatsApp do bot
+
+on:
+  workflow_dispatch:
+    inputs:
+      phone: { description: "Número do bot com DDI+DDD (ex.: 5554999990000)", required: true }
+
+concurrency: { group: whatsapp, cancel-in-progress: true }
+
+jobs:
+  parear:
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    defaults: { run: { working-directory: bot-grupo } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "20" }
+      - run: npm ci --omit=dev
+      - run: node src/pair.js
+        env: { DATABASE_URL: "${{ secrets.DATABASE_URL }}", PHONE: "${{ github.event.inputs.phone }}" }

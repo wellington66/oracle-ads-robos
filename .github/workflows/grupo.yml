@@ -1,0 +1,21 @@
+name: Bot do grupo (WhatsApp)
+
+on:
+  schedule:
+    - cron: "0 11,13,15,17,19,21,23 * * *"   # 8h às 20h (Brasília), a cada 2h
+  workflow_dispatch:
+
+concurrency: { group: whatsapp, cancel-in-progress: false }
+
+jobs:
+  postar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    defaults: { run: { working-directory: bot-grupo } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "20" }
+      - run: npm ci --omit=dev
+      - run: node src/post.js
+        env: { DATABASE_URL: "${{ secrets.DATABASE_URL }}", SITE: "https://garimpo-ads.vercel.app" }

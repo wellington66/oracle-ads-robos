@@ -1,0 +1,15 @@
+{
+  "name": "garimpo-bot-grupo",
+  "version": "1.0.0",
+  "description": "Bot do grupo grátis do Garimpo: posta ofertas escaladas com criativo e, de tempo em tempo, convida para o Garimpo",
+  "main": "src/index.js",
+  "type": "commonjs",
+  "scripts": { "post": "node src/post.js", "pair": "node src/pair.js", "start": "node src/index.js" },
+  "dependencies": {
+    "@neondatabase/serverless": "^1.1.0",
+    "@whiskeysockets/baileys": "^6.7.9",
+    "pino": "^9.4.0",
+    "qrcode": "^1.5.4",
+    "qrcode-terminal": "^0.12.0"
+  }
+}
