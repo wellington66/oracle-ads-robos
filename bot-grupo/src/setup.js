@@ -54,11 +54,13 @@ async function perfil(sock) {
   await step('recado do perfil', () => sock.updateProfileStatus('Radar de ofertas escaladas · Brasil e gringa · oracle-ads.vercel.app'));
 }
 
-async function criarGrupo(sock, admin) {
+async function criarGrupo(sock, admin, novo = false) {
   const existente = await getKV('group', null);
-  if (existente?.id) { console.log('Grupo já existe:', existente.link); return existente; }
+  if (existente?.id && !novo) { console.log('Grupo já existe:', existente.link); return existente; }
+  const todos = await getKV('groups_all', existente?.id ? [existente] : []);
+  const nome = todos.length ? `${NOME} #${todos.length + 1}` : NOME;
   const membros = admin && admin.length >= 12 ? [admin + '@s.whatsapp.net'] : [];
-  let g = await step('criar grupo', () => sock.groupCreate(NOME, membros));
+  let g = await step('criar grupo', () => sock.groupCreate(nome, membros));
   if (!g && !membros.length) throw new Error('O WhatsApp pediu ao menos 1 participante — informe seu WhatsApp pessoal no painel e tente "Criar grupo agora".');
   const jid = g.id;
   await step('descrição e regras', () => sock.groupUpdateDescription(jid, DESCRICAO));
@@ -71,8 +73,10 @@ async function criarGrupo(sock, admin) {
   const code = await step('link de convite', () => sock.groupInviteCode(jid));
   const link = code ? 'https://chat.whatsapp.com/' + code : null;
   const cfg = await getKV('config', {});
-  await setKV('config', { ...cfg, groupIds: [jid], groupName: NOME, paused: false });
-  const out = { id: jid, name: NOME, link, createdAt: new Date().toISOString() };
+  // o bot posta em todos os grupos; o link /grupo aponta sempre para o mais novo
+  await setKV('config', { ...cfg, groupIds: [...new Set([...(cfg.groupIds || []), jid])], groupName: NOME, paused: false });
+  const out = { id: jid, name: nome, link, createdAt: new Date().toISOString() };
+  await setKV('groups_all', [...todos.filter((t) => t.id !== jid), out]);
   await setKV('group', out);
   console.log('✅ Grupo pronto:', link);
   return out;

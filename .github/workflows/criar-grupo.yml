@@ -5,6 +5,7 @@ on:
     inputs:
       nome: { description: "Nome do grupo", default: "ORACLE ADS · Ofertas Escaladas" }
       admin: { description: "WhatsApp pessoal do dono (DDI+DDD) para virar admin", default: "" }
+      novo: { description: "1 = criar mais um grupo (o bot posta em todos)", default: "0" }
 
 concurrency: { group: whatsapp, cancel-in-progress: false }
 
@@ -19,4 +20,4 @@ jobs:
         with: { node-version: "20" }
       - run: npm ci --omit=dev
       - run: node src/criar-grupo.js
-        env: { DATABASE_URL: "${{ secrets.DATABASE_URL }}", GROUP_NAME: "${{ github.event.inputs.nome }}", ADMIN_PHONE: "${{ github.event.inputs.admin }}", SITE: "https://oracle-ads.vercel.app" }
+        env: { DATABASE_URL: "${{ secrets.DATABASE_URL }}", GROUP_NAME: "${{ github.event.inputs.nome }}", ADMIN_PHONE: "${{ github.event.inputs.admin }}", NOVO: "${{ github.event.inputs.novo }}", SITE: "https://oracle-ads.vercel.app" }

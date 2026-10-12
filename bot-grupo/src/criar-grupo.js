@@ -7,7 +7,7 @@ const { setKV } = require('./db-auth');
   const sock = await connect();
   try {
     await perfil(sock);
-    await criarGrupo(sock, String(process.env.ADMIN_PHONE || '').replace(/\D/g, ''));
+    await criarGrupo(sock, String(process.env.ADMIN_PHONE || '').replace(/\D/g, ''), process.env.NOVO === '1');
     await new Promise((r) => setTimeout(r, 4000));
     await postOnce(sock);
   } catch (e) {

@@ -16,10 +16,16 @@ async function build(st) {
   const skip = encodeURIComponent((st.recent || []).slice(-300).join(','));
   const pages = encodeURIComponent((st.pages || []).slice(-40).join('|'));
   const pulse = await api('/api/public?a=pulse');
+  // faixa sorteada: metade médias (até 29 anúncios), um terço boas (30-49), às vezes uma das mais escaladas (50+)
+  const r = Math.random(), tier = r < 0.5 ? 'media' : r < 0.85 ? 'boa' : 'top';
+  const ordem = { media: ['media', 'boa', 'top'], boa: ['boa', 'media', 'top'], top: ['top', 'boa', 'media'] }[tier];
   const offer = async (...tries) => {
     let a = null;
-    for (const extra of [...tries, '']) { try { a = await api(`/api/public?a=teaser&max=${MAX_ADS}&skip=${skip}&pages=${pages}${extra}`); break; } catch {} }
-    if (!a) a = await api(`/api/public?a=teaser&skip=${skip}`);
+    for (const t of ordem) {
+      for (const extra of [...tries, '']) { try { a = await api(`/api/public?a=teaser&focus=1&tier=${t}&skip=${skip}&pages=${pages}${extra}`); break; } catch {} }
+      if (a) break;
+    }
+    if (!a) a = await api(`/api/public?a=teaser&max=${MAX_ADS}&skip=${skip}&pages=${pages}`).catch(() => api(`/api/public?a=teaser&skip=${skip}`));
     st.recent = [...(st.recent || []), a.id].slice(-400); st.pages = [...(st.pages || []), a.page].slice(-60);
     return a;
   };

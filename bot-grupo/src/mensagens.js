@@ -24,7 +24,9 @@ const LICOES = [
 
 const FLAG = { BR: '🇧🇷', US: '🇺🇸', MX: '🇲🇽', ES: '🇪🇸', CO: '🇨🇴', AR: '🇦🇷', PT: '🇵🇹', GB: '🇬🇧', CA: '🇨🇦', FR: '🇫🇷', IT: '🇮🇹', DE: '🇩🇪', CL: '🇨🇱', PE: '🇵🇪', AU: '🇦🇺', ALL: '🌎' };
 /** chance de venda (Índice de Lucro) em semáforo: vermelho ruim, amarelo mais ou menos, verde vende */
-const semaforo = (n) => (n >= 65 ? ['🟢', 'ALTA — vende'] : n >= 40 ? ['🟡', 'MÉDIA — em validação'] : ['🔴', 'BAIXA — só para estudo']);
+// classificação pelo nº de anúncios ativos do anunciante (🔴 só quando a chance de venda é fraca)
+const faixa = (ads, profit) => (profit < 35 ? ['🔴', 'FRACA — só para estudo'] : ads >= 50 ? ['🔥', 'MAIS ESCALADA — 50+ anúncios'] : ads >= 30 ? ['🟢', 'BOA — 30+ anúncios, vendendo'] : ['🟡', 'MÉDIA — validando, entre cedo']);
+const tipo = (a) => (a.ptype === 'fisico' ? '📦 Produto físico · dá para fazer drop' : ['suplementos', 'saude', 'emagrecimento', 'masculino', 'beleza'].includes(a.niche) ? '💊 Nutra' : '💸 Infoproduto low ticket');
 const barra = (n) => '▰'.repeat(Math.round(n / 10)) + '▱'.repeat(10 - Math.round(n / 10));
 
 const GANCHO = {
@@ -35,7 +37,7 @@ const GANCHO = {
 
 function offerCaption(a, kind, site, pulse = {}) {
   const f = a.funnel || {};
-  const [cor, rotulo] = semaforo(a.profit || 0);
+  const [cor, rotulo] = faixa(a.ads || 0, a.profit || 0);
   const escala = a.scale ?? 0;
   const titulo = kind === 'gringa' ? `${cor} *OFERTA GRINGA* ${FLAG[a.country] || ''} ${PAIS[a.country] || a.country}` : kind === 'cloaker' && f.finalUrl ? `${cor} *CLOAKER QUEBRADO* ${FLAG[a.country] || ''}` : `${cor} *OFERTA DO DIA* ${FLAG[a.country] || ''}`;
   const why = (a.why || []).slice(0, 3);
@@ -45,11 +47,12 @@ function offerCaption(a, kind, site, pulse = {}) {
     (GANCHO[kind] || GANCHO.relatorio)(a),
     '',
     '📊 *RAIO-X DA OFERTA*',
-    `${cor} Chance de venda: *${a.profit}/100* · ${rotulo}`,
+    `${cor} *${rotulo}*`,
+    `🎲 Chance de venda: *${a.profit}/100*`,
     barra(a.profit || 0),
     `📈 Escala: *${escala}/100*  ${barra(escala)}`,
     `🏷️ Anunciante: *${a.page}*`,
-    `🗂️ Nicho: ${a.nicheLabel}`,
+    `🗂️ ${tipo(a)} · ${a.nicheLabel}`,
     `🎯 Anúncios ativos: *${fmt(a.ads)}*`,
     `🎬 Criativos na oferta: *${a.creatives || 1}*${a.copies > 1 ? ` · principal duplicado em ${a.copies} conjuntos` : ''}`,
     `⏳ No ar há: *${a.days} dias*`,
@@ -65,6 +68,7 @@ function offerCaption(a, kind, site, pulse = {}) {
     a.landing && !/whatsapp\.com|wa\.me/.test(a.landing) ? `▸ Página da oferta: ${a.landing}` : null,
     '',
     '━━━━━━━━━━━━━━━',
+    a.ads >= 50 ? '🔒 Ofertas com 50+ anúncios como esta ficam liberadas completas no *Premium* do app.' : null,
     pulse.lidos ? `🤖 *Nas últimas 24h o robô do Oracle leu ${fmt(pulse.lidos)} ofertas* — ${fmt(pulse.lucro)} com chance de venda alta. Aqui no grupo cai uma por hora. No app você vê *todas*, filtra por nicho e país, baixa o vídeo em HD, quebra a VSL e o cloaker.` : '🤖 Aqui no grupo cai uma por hora. No app você vê *todas*, filtra por nicho e país, baixa o vídeo em HD, quebra a VSL e o cloaker.',
     `👉 *Teste grátis 30 min:* ${site}/app/?teste=1`,
   ];
