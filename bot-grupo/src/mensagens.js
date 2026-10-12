@@ -26,12 +26,12 @@ function offerCaption(a, kind, site) {
   const f = a.funnel || {};
   const linhaPag = f.finalUrl ? `\n▸ Página real: ${host(f.finalUrl)}${f.platform ? ' · checkout ' + f.platform : ''}${f.price ? ' · ' + f.price : ''}` : '';
   if (kind === 'gringa') {
-    return `*ESCALANDO LÁ FORA* · ${PAIS[a.country] || a.country}\n\n*${a.page}* está com *${fmt(a.ads)} anúncios* ativos. O criativo principal roda em *${a.copies} conjuntos* há *${a.days} dias*.\n\n▸ Nicho: ${a.nicheLabel}\n▸ Índice de Lucro: *${a.profit}/100* (${a.roi})${linhaPag}\n\nO que escala lá fora chega aqui em semanas. Quem modela primeiro, fatura primeiro.`;
+    return `*VALIDADO LÁ FORA* · ${PAIS[a.country] || a.country}\n\n*${a.page}* está com *${fmt(a.ads)} anúncios* ativos. ${a.copies > 1 ? `O criativo principal roda em *${a.copies} conjuntos*` : 'O criativo principal roda'} há *${a.days} dias*.\n\n▸ Nicho: ${a.nicheLabel}\n▸ Índice de Lucro: *${a.profit}/100* (${a.roi})${linhaPag}\n\nO que escala lá fora chega aqui em semanas. Quem modela primeiro, fatura primeiro.`;
   }
   if (kind === 'cloaker') {
     return `*CLOAKER QUEBRADO* · ${hoje()}\n\nAnúncio de *${a.page}* (${fmt(a.ads)} anúncios ativos, ${a.days} dias no ar).\n\nAbrindo como lead real — celular, vindo do Facebook — o destino é:\n▸ *${host(f.finalUrl)}*${f.type ? ' · ' + f.type : ''}\n▸ Checkout: ${f.platform || 'não exposto na página'}${f.price ? '\n▸ Ticket: ' + f.price : ''}\n\nÍndice de Lucro *${a.profit}/100*. A estrutura completa (VSL, mecanismo e oferta) fica no radar.`;
   }
-  return `*RELATÓRIO DE OFERTA* · ${hoje()}\n\n*${a.page}* está rodando *${fmt(a.ads)} anúncios* ao mesmo tempo. O criativo principal foi duplicado em *${a.copies} conjuntos* e está no ar há *${a.days} dias*.\n\nAinda não é anunciante gigante — é a janela para modelar *antes* de saturar. Ninguém mantém anúncio no prejuízo por ${a.days} dias.\n\n▸ Nicho: ${a.nicheLabel}\n▸ Índice de Lucro: *${a.profit}/100* (${a.roi})${linhaPag}\n\nOs dados são públicos. O difícil é achar antes de saturar — o radar faz isso sozinho, a cada hora.`;
+  return `*RELATÓRIO DE OFERTA* · ${hoje()}\n\n*${a.page}* está rodando *${fmt(a.ads)} anúncios* ao mesmo tempo. ${a.copies > 1 ? `O criativo principal foi duplicado em *${a.copies} conjuntos*` : 'O criativo principal segue firme'} e está no ar há *${a.days} dias*.\n\nAinda não é anunciante gigante — é a janela para modelar *antes* de saturar. Ninguém mantém anúncio no prejuízo por ${a.days} dias.\n\n▸ Nicho: ${a.nicheLabel}\n▸ Índice de Lucro: *${a.profit}/100* (${a.roi})${linhaPag}\n\nOs dados são públicos. O difícil é achar antes de saturar — o radar faz isso sozinho, a cada hora.`;
 }
 
 function bastidores(p, site) {
