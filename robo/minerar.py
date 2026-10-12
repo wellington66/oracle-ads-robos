@@ -284,8 +284,8 @@ def main():
                 print(f"[funil] {dom} -> {f.get('type')} · {f.get('platform') or 'sem checkout'} · {f.get('price') or 's/ preço'}")
 
     lista = list(todos.values())
-    for i in range(0, max(1, len(lista)), 1000):
-        r = api(f"/api/robot?a=ingest&acct={args.conta}", {"ads": lista[i:i + 1000], "searches": registro if i == 0 else []})
+    for i in range(0, max(1, len(lista)), 250):
+        r = api(f"/api/robot?a=ingest&acct={args.conta}", {"ads": lista[i:i + 250], "searches": registro if i == 0 else [], "total": len(lista), "final": i > 0})
         print("[api]", r)
     print(f"[fim] {len(lista)} anúncios enviados em {round((time.time() - INICIO) / 60, 1)} min")
 
