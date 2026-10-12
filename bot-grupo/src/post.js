@@ -4,7 +4,7 @@ const pino = require('pino');
 const { ROTA, LICOES, offerCaption, bastidores, convite } = require('./mensagens');
 const { getKV, setKV } = require('./db-auth');
 
-const SITE = (process.env.SITE || 'https://garimpo-ads.vercel.app').replace(/\/$/, '');
+const SITE = (process.env.SITE || 'https://oracle-ads.vercel.app').replace(/\/$/, '');
 const DRY = process.env.DRY_RUN === '1';
 const cardUrl = (q) => `${SITE}/api/card?${new URLSearchParams(q)}&v=${Date.now() % 1e6}`;
 

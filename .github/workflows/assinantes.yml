@@ -1,0 +1,23 @@
+name: Robôs dos assinantes (nuvem)
+
+# Cada assinante ativo tem o próprio robô minerando na nuvem, no ritmo do plano
+# (Premium a cada 2h, Pro a cada 12h) — mesmo com o computador dele desligado.
+on:
+  schedule:
+    - cron: "23 */2 * * *"
+  workflow_dispatch:
+
+concurrency: { group: assinantes, cancel-in-progress: false }
+
+jobs:
+  minerar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 170
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install playwright==1.48.0 && python -m playwright install --with-deps chromium
+      - name: Minerar para cada assinante
+        env: { ROBOT_KEY: "${{ secrets.ROBOT_KEY }}", PYTHONUNBUFFERED: "1" }
+        run: python robo/minerar.py --assinantes --minutos 150

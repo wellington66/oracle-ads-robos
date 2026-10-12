@@ -2,12 +2,12 @@
 num Chromium headless, lê o JSON dos anúncios, mede a escala de cada anunciante e manda tudo para a API.
 
 Uso:  ROBOT_KEY=... python robo/minerar.py --conta demo   (ou --conta owner)
-Opcionais: GARIMPO_API (padrão https://garimpo-ads.vercel.app), ROBO_MINUTOS (orçamento), ROBO_CHANNEL=chrome
+Opcionais: GARIMPO_API (padrão https://oracle-ads.vercel.app), ROBO_MINUTOS (orçamento), ROBO_CHANNEL=chrome
 """
 import os, re, sys, json, time, random, argparse, datetime, urllib.parse, urllib.request
 from playwright.sync_api import sync_playwright
 
-API = os.environ.get("GARIMPO_API", "https://garimpo-ads.vercel.app").rstrip("/")
+API = os.environ.get("GARIMPO_API", "https://oracle-ads.vercel.app").rstrip("/")
 KEY = os.environ.get("ROBOT_KEY", "")
 INICIO = time.time()
 
@@ -164,6 +164,26 @@ def valor(m):
         return moeda, None
 
 
+def tipo_funil(url, txt, html, players, plat):
+    """VSL, Quiz, Advertorial, Página direta, WhatsApp, Loja, App ou Webinar."""
+    t, u = txt.lower(), url.lower()
+    if re.search(r"wa\.me|api\.whatsapp|chat\.whatsapp", html, re.I) and len(t) < 2500:
+        return "WhatsApp / X1"
+    if re.search(r"apps\.apple\.com|play\.google\.com/store/apps", html, re.I):
+        return "App"
+    if plat in ("shopify", "yampi", "cartpanda") or re.search(r"adicionar ao carrinho|add to cart|comprar agora.*frete|frete gr", t):
+        return "Loja"
+    if re.search(r"quiz|inlead|pergunta 1|question 1|responda", u + t[:3000]):
+        return "Quiz"
+    if re.search(r"webinar|aula ao vivo|masterclass|inscreva-se|evento online|grupo vip", t[:4000]):
+        return "Webinar / Lançamento"
+    if players:
+        return "VSL"
+    if len(t) > 6000 and not plat:
+        return "Advertorial"
+    return "Página direta"
+
+
 def abrir_como_lead(p, url, pais):
     """Abre a página como um lead real (iPhone, vindo do Facebook, fbclid) — é o que o cloaker entrega ao comprador."""
     dev = dict(p.devices["iPhone 13"])
@@ -199,7 +219,7 @@ def abrir_como_lead(p, url, pais):
         precos = [(m, v) for m, v in precos if v and 3 <= v <= 5000]
         moeda, v = (min(precos, key=lambda x: x[1]) if precos else (None, None))
         out = {"finalUrl": re.sub(r"[?&](fbclid|utm_[a-z]+)=[^&]*", "", landing), "title": (titulo or "")[:120],
-               "type": "VSL" if players else ("Quiz" if re.search(r"quiz|pergunta 1|question 1|inlead", txt[:3000] + landing, re.I) else "Página"),
+               "type": tipo_funil(landing, txt, html, players, plat),
                "platform": plat, "checkout": co, "players": players, "price": f"{moeda} {v:.2f}".replace(".", ",") if v else None,
                "priceValue": v, "currency": "BRL" if moeda == "R$" else ("EUR" if moeda == "€" else "USD" if moeda else None),
                "at": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="minutes")}
@@ -213,6 +233,7 @@ def abrir_como_lead(p, url, pais):
 
 def main():
     ap = argparse.ArgumentParser()
+    ap.add_argument("--assinantes", action="store_true", help="roda o robô na nuvem de cada assinante ativo")
     ap.add_argument("--conta", default="demo")
     ap.add_argument("--minutos", type=float, default=float(os.environ.get("ROBO_MINUTOS", 25)))
     ap.add_argument("--paginas", type=int, default=12, help="anunciantes medidos por rodada")
@@ -221,7 +242,28 @@ def main():
     args = ap.parse_args()
     if not KEY:
         sys.exit("defina ROBOT_KEY")
-    plano = api(f"/api/robot?a=plan&acct={args.conta}&n={args.buscas}")
+    if args.assinantes:
+        contas = api("/api/robot?a=accounts")["accounts"]
+        print(f"[assinantes] {len(contas)} robôs na fila")
+        fim = time.time() + args.minutos * 60
+        for c in contas:
+            resto = (fim - time.time()) / 60
+            if resto < 4:
+                print("[tempo] restante fica para a próxima rodada")
+                break
+            print(f"===== {c['email']} ({c['plan']}) =====")
+            try:
+                rodar(argparse.Namespace(conta=c["email"], buscas=c["searches"], paginas=4, funis=3, minutos=min(7, resto)))
+            except Exception as e:
+                print("   falhou:", str(e)[:150])
+        return
+    rodar(args)
+
+
+def rodar(args):
+    global INICIO
+    INICIO = time.time()
+    plano = api(f"/api/robot?a=plan&acct={urllib.parse.quote(args.conta)}&n={args.buscas}")
     buscas = [b for b in plano["searches"] if b.get("platform", "meta") == "meta"]
     print(f"[plano] {len(buscas)} buscas · {len(plano.get('pageIds', []))} anunciantes acompanhados")
     sobra = lambda f=1.0: time.time() - INICIO < args.minutos * 60 * f
@@ -285,7 +327,7 @@ def main():
 
     lista = list(todos.values())
     for i in range(0, max(1, len(lista)), 250):
-        r = api(f"/api/robot?a=ingest&acct={args.conta}", {"ads": lista[i:i + 250], "searches": registro if i == 0 else [], "total": len(lista), "final": i > 0})
+        r = api(f"/api/robot?a=ingest&acct={urllib.parse.quote(args.conta)}", {"ads": lista[i:i + 250], "searches": registro if i == 0 else [], "total": len(lista), "final": i > 0})
         print("[api]", r)
     print(f"[fim] {len(lista)} anúncios enviados em {round((time.time() - INICIO) / 60, 1)} min")
 

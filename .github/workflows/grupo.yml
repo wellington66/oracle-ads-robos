@@ -18,4 +18,4 @@ jobs:
         with: { node-version: "20" }
       - run: npm ci --omit=dev
       - run: node src/post.js
-        env: { DATABASE_URL: "${{ secrets.DATABASE_URL }}", SITE: "https://garimpo-ads.vercel.app" }
+        env: { DATABASE_URL: "${{ secrets.DATABASE_URL }}", SITE: "https://oracle-ads.vercel.app" }
