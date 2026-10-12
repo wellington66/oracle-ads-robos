@@ -6,6 +6,11 @@ Opcionais: GARIMPO_API (padrão https://oracle-ads.vercel.app), ROBO_MINUTOS (or
 """
 import os, re, sys, json, time, random, argparse, datetime, urllib.parse, urllib.request
 from playwright.sync_api import sync_playwright
+import unicodedata
+
+
+def unidecode(t):
+    return "".join(c for c in unicodedata.normalize("NFD", t) if unicodedata.category(c) != "Mn")
 
 API = os.environ.get("GARIMPO_API", "https://oracle-ads.vercel.app").rstrip("/")
 KEY = os.environ.get("ROBOT_KEY", "")
@@ -141,7 +146,7 @@ def para_garimpo(a, pais, termo):
     }
 
 
-LOCAL = re.compile(r"cl[ií]nica|imobili|advoca|odonto|restaurante|pizzaria|supermercado|igreja|prefeitura|farm[aá]cia|"
+LOCAL = re.compile(r"cl[ií]nica|imobili|advoca|odonto|restaurante|pizzaria|supermercado|igreja|prefeitura|farm[aá]cia|quiropra|fisioterap|est[eé]tica|sal[aã]o|barbearia|consult[oó]rio|faculdade|col[eé]gio|escola|academia|seguros?|cons[oó]rcio|"
                    r"concession|banco|governo|partido|deputad|vereador|senador|jornal|news|r[aá]dio", re.I)
 
 
@@ -236,7 +241,7 @@ def main():
     ap.add_argument("--assinantes", action="store_true", help="roda o robô na nuvem de cada assinante ativo")
     ap.add_argument("--conta", default="demo")
     ap.add_argument("--minutos", type=float, default=float(os.environ.get("ROBO_MINUTOS", 25)))
-    ap.add_argument("--paginas", type=int, default=12, help="anunciantes medidos por rodada")
+    ap.add_argument("--paginas", type=int, default=18, help="anunciantes medidos por rodada")
     ap.add_argument("--buscas", type=int, default=0, help="nº de buscas (0 = o do plano)")
     ap.add_argument("--funis", type=int, default=12, help="páginas abertas como lead (cloaker quebrado)")
     args = ap.parse_args()
@@ -285,7 +290,14 @@ def rodar(args):
             print(f"[busca] {b['country']}: {b['q']} -> {len(lidos)} anúncios (~{total})")
 
         # mede a escala dos anunciantes mais promissores (biblioteca do anunciante = total de ativos)
-        cand = sorted(por_pagina, key=lambda pid: (max(x["copies"] for x in por_pagina[pid]) + len(por_pagina[pid]) * 2), reverse=True)
+        # prioridade: parecido com as referências do dono (mesmo tipo de oferta) + criativo duplicado + nº de anúncios na busca
+        ref = [w for w in plano.get("refWords", []) if w]
+        def parecido(pid):
+            t = " ".join(re.sub(r"[^a-z0-9 ]", " ", unidecode((x["text"] + " " + x["headline"]).lower())) for x in por_pagina[pid][:6])
+            t = re.sub(r"\s+", " ", t)
+            return sum(1 for w in ref if " " + w + " " in " " + t + " ")
+        nota = {pid: max(x["copies"] for x in por_pagina[pid]) + len(por_pagina[pid]) * 2 + (parecido(pid) * 4 if ref else 0) for pid in por_pagina}
+        cand = sorted(por_pagina, key=lambda pid: nota[pid], reverse=True)
         cand = [c for c in cand if c][: args.paginas] + [str(x) for x in plano.get("pageIds", [])]
         for pid in dict.fromkeys(cand):
             if not sobra(0.92):

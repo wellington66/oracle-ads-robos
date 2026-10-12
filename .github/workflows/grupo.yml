@@ -2,15 +2,35 @@ name: Bot do grupo (WhatsApp)
 
 on:
   schedule:
-    - cron: "0 11-23,0 * * *"   # de hora em hora, 8h às 21h (Brasília)
+    # reserva: se o plantão cair, um destes religa (minuto quebrado — o GitHub descarta muito agendamento em hora cheia)
+    - cron: "41 10,16,22 * * *"
   workflow_dispatch:
     inputs:
       qtd: { description: "Quantos posts seguidos (1 = normal)", default: "1" }
+      modo: { description: "agora = posta já · plantao = fica de pé postando no horário", default: "agora" }
 
-concurrency: { group: whatsapp, cancel-in-progress: false }
+permissions: { contents: read, actions: write }
 
 jobs:
-  postar:
+  # plantão: ~5h45 de pé, posta no horário certo e dispara o próximo sozinho
+  plantao:
+    if: github.event_name == 'schedule' || github.event.inputs.modo == 'plantao'
+    concurrency: { group: whatsapp-plantao, cancel-in-progress: false }
+    runs-on: ubuntu-latest
+    timeout-minutes: 355
+    defaults: { run: { working-directory: bot-grupo } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "20" }
+      - run: npm ci --omit=dev
+      - run: node src/loop.js
+        env: { DATABASE_URL: "${{ secrets.DATABASE_URL }}", SITE: "https://oracle-ads.vercel.app", GH_TOKEN: "${{ github.token }}" }
+
+  # botão "postar agora" do painel
+  agora:
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.modo != 'plantao'
+    concurrency: { group: whatsapp-agora, cancel-in-progress: false }
     runs-on: ubuntu-latest
     timeout-minutes: 12
     defaults: { run: { working-directory: bot-grupo } }
@@ -20,4 +40,4 @@ jobs:
         with: { node-version: "20" }
       - run: npm ci --omit=dev
       - run: if [ "${QTD:-1}" -gt 1 ]; then node src/rodada-teste.js; else node src/post.js; fi
-        env: { DATABASE_URL: "${{ secrets.DATABASE_URL }}", SITE: "https://oracle-ads.vercel.app", QTD: "${{ github.event.inputs.qtd }}", FORCE: "${{ github.event_name == 'workflow_dispatch' && '1' || '' }}" }
+        env: { DATABASE_URL: "${{ secrets.DATABASE_URL }}", SITE: "https://oracle-ads.vercel.app", QTD: "${{ github.event.inputs.qtd }}", FORCE: "1" }

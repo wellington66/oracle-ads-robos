@@ -29,7 +29,7 @@ async function build(st, cfg = {}) {
       for (const extra of [...tries, '']) { try { a = await api(`/api/public?a=teaser&focus=${foco}&tier=${t}&skip=${skip}&pages=${pages}${extra}`); break; } catch {} }
       if (a) break;
     }
-    if (!a) a = await api(`/api/public?a=teaser&max=${MAX_ADS}&skip=${skip}&pages=${pages}`).catch(() => api(`/api/public?a=teaser&skip=${skip}`));
+    if (!a) a = await api(`/api/public?a=teaser&focus=${foco}&tier=boa&skip=${skip}`).catch(() => api(`/api/public?a=teaser&focus=${foco}&skip=${skip}`));
     st.recent = [...(st.recent || []), a.id].slice(-400); st.pages = [...(st.pages || []), a.page].slice(-60);
     return a;
   };
