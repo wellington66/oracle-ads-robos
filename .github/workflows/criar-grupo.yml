@@ -1,0 +1,22 @@
+name: Criar grupo do WhatsApp
+
+on:
+  workflow_dispatch:
+    inputs:
+      nome: { description: "Nome do grupo", default: "ORACLE ADS · Ofertas Escaladas" }
+      admin: { description: "WhatsApp pessoal do dono (DDI+DDD) para virar admin", default: "" }
+
+concurrency: { group: whatsapp, cancel-in-progress: false }
+
+jobs:
+  criar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    defaults: { run: { working-directory: bot-grupo } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "20" }
+      - run: npm ci --omit=dev
+      - run: node src/criar-grupo.js
+        env: { DATABASE_URL: "${{ secrets.DATABASE_URL }}", GROUP_NAME: "${{ github.event.inputs.nome }}", ADMIN_PHONE: "${{ github.event.inputs.admin }}", SITE: "https://oracle-ads.vercel.app" }
