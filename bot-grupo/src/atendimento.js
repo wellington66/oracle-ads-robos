@@ -1,6 +1,6 @@
 // Atendimento do privado: quem chama o bot (vindo do anúncio "Leads WhatsApp") recebe na hora o link do grupo grátis.
 // Responde uma vez por contato (de novo só depois de RESPONDE_DE_NOVO_H), registra o lead em g_wa_dm.
-const { getKV, sql } = require('./db-auth');
+const { getKV, setKV, sql } = require('./db-auth');
 
 const RESPONDE_DE_NOVO_H = 12;
 const MAX_ATRASO_H = 48; // mensagem recebida com o bot fora do ar: ainda responde se tiver até 48h
@@ -62,4 +62,24 @@ function atender(sock) {
   });
 }
 
-module.exports = { atender };
+/** fila manual (KV 'dm_fila': lista de números): manda o link do grupo para quem não foi respondido sozinho */
+async function processarFila(sock) {
+  const fila = await getKV('dm_fila', []);
+  if (!fila.length) return;
+  await setKV('dm_fila', []);
+  const link = await linkDoGrupo();
+  for (const num of fila) {
+    try {
+      const [r] = await sock.onWhatsApp(String(num).replace(/\D/g, ''));
+      if (!r?.exists) { console.error('❌ fila: sem WhatsApp', num); continue; }
+      await schema();
+      const [c] = await sql`SELECT nome FROM g_wa_dm WHERE jid = ${r.jid}`;
+      await sock.sendMessage(r.jid, { text: resposta(c?.nome || '', link) });
+      await sql`INSERT INTO g_wa_dm (jid, respondido_em) VALUES (${r.jid}, now()) ON CONFLICT (jid) DO UPDATE SET respondido_em = now()`;
+      console.log('💬 fila: enviado para', r.jid);
+      await dorme(3000);
+    } catch (e) { console.error('❌ fila:', num, e.message); }
+  }
+}
+
+module.exports = { atender, processarFila };

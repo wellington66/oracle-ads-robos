@@ -2,7 +2,7 @@
 // atrasa/pula execuções). Antes de acabar, dispara a próxima execução sozinho — a corrente nunca para.
 // Fica conectado o tempo todo: quem chama o bot no privado (anúncio) recebe o link do grupo na hora.
 const { postOnce, connect } = require('./post');
-const { atender } = require('./atendimento');
+const { atender, processarFila } = require('./atendimento');
 const { getKV, setKV } = require('./db-auth');
 
 const DURA = (+process.env.LOOP_MIN || 345) * 60000;
@@ -51,6 +51,7 @@ async function conectado() {
   while (Date.now() - INICIO < DURA) {
     try {
       const s = await conectado();
+      await processarFila(s).catch((e) => console.error('❌ fila:', e.message));
       if (await devePostar()) {
         try { await postOnce(s); }
         catch (e) { await setKV('status', { ok: false, at: new Date().toISOString(), error: e.message }); console.error('❌', e.message); }
