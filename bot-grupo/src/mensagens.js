@@ -22,16 +22,37 @@ const LICOES = [
     t: (p) => `*POR QUE LOW TICKET ESCALA TÃO RÁPIDO*\n\nDecisão de R$ 19 a R$ 47 acontece em segundos. Isso deixa o CPA baixo e o anunciante consegue subir verba sem quebrar o ROAS.\n\nO padrão que mais aparece entre as ofertas com Índice 75+ do radar:\n▸ VSL ou página curta\n▸ checkout direto (Kiwify, Hotmart, Cakto, Payt…)\n▸ order bump e upsell logo depois\n\nNos próximos relatórios, repare no *ticket* e no *checkout* de cada oferta.` },
 ];
 
+const FLAG = { BR: '🇧🇷', US: '🇺🇸', MX: '🇲🇽', ES: '🇪🇸', CO: '🇨🇴', AR: '🇦🇷', PT: '🇵🇹', GB: '🇬🇧', CA: '🇨🇦', FR: '🇫🇷', IT: '🇮🇹', DE: '🇩🇪', CL: '🇨🇱', PE: '🇵🇪', AU: '🇦🇺', ALL: '🌎' };
+/** chance de venda (Índice de Lucro) em semáforo: vermelho ruim, amarelo mais ou menos, verde vende */
+const semaforo = (n) => (n >= 65 ? ['🟢', 'ALTA — vende'] : n >= 40 ? ['🟡', 'MÉDIA — em validação'] : ['🔴', 'BAIXA — só para estudo']);
+const barra = (n) => '▰'.repeat(Math.round(n / 10)) + '▱'.repeat(10 - Math.round(n / 10));
+
 function offerCaption(a, kind, site) {
   const f = a.funnel || {};
-  const linhaPag = f.finalUrl ? `\n▸ Página real: ${host(f.finalUrl)}${f.platform ? ' · checkout ' + f.platform : ''}${f.price ? ' · ' + f.price : ''}` : '';
-  if (kind === 'gringa') {
-    return `*VALIDADO LÁ FORA* · ${PAIS[a.country] || a.country}\n\n*${a.page}* está com *${fmt(a.ads)} anúncios* ativos. ${a.copies > 1 ? `O criativo principal roda em *${a.copies} conjuntos*` : 'O criativo principal roda'} há *${a.days} dias*.\n\n▸ Nicho: ${a.nicheLabel}\n▸ Índice de Lucro: *${a.profit}/100* (${a.roi})${linhaPag}\n\nO que escala lá fora chega aqui em semanas. Quem modela primeiro, fatura primeiro.`;
-  }
-  if (kind === 'cloaker') {
-    return `*CLOAKER QUEBRADO* · ${hoje()}\n\nAnúncio de *${a.page}* (${fmt(a.ads)} anúncios ativos, ${a.days} dias no ar).\n\nAbrindo como lead real — celular, vindo do Facebook — o destino é:\n▸ *${host(f.finalUrl)}*${f.type ? ' · ' + f.type : ''}\n▸ Checkout: ${f.platform || 'não exposto na página'}${f.price ? '\n▸ Ticket: ' + f.price : ''}\n\nÍndice de Lucro *${a.profit}/100*. A estrutura completa (VSL, mecanismo e oferta) fica no radar.`;
-  }
-  return `*RELATÓRIO DE OFERTA* · ${hoje()}\n\n*${a.page}* está rodando *${fmt(a.ads)} anúncios* ao mesmo tempo. ${a.copies > 1 ? `O criativo principal foi duplicado em *${a.copies} conjuntos*` : 'O criativo principal segue firme'} e está no ar há *${a.days} dias*.\n\nAinda não é anunciante gigante — é a janela para modelar *antes* de saturar. Ninguém mantém anúncio no prejuízo por ${a.days} dias.\n\n▸ Nicho: ${a.nicheLabel}\n▸ Índice de Lucro: *${a.profit}/100* (${a.roi})${linhaPag}\n\nOs dados são públicos. O difícil é achar antes de saturar — o radar faz isso sozinho, a cada hora.`;
+  const [cor, rotulo] = semaforo(a.profit || 0);
+  const escala = a.scale ?? 0;
+  const titulo = kind === 'gringa' ? `*OFERTA GRINGA* ${FLAG[a.country] || ''} ${PAIS[a.country] || a.country}` : kind === 'cloaker' && f.finalUrl ? '*CLOAKER QUEBRADO* — página real abaixo' : `*OFERTA DO DIA* ${FLAG[a.country] || ''}`;
+  const linhas = [
+    titulo,
+    '',
+    `${cor} *CHANCE DE VENDA: ${a.profit}/100* · ${rotulo}`,
+    `${barra(a.profit || 0)}`,
+    `📈 *Escala:* ${escala}/100  ${barra(escala)}`,
+    '',
+    `🏷️ *${a.page}* · ${a.nicheLabel}`,
+    `🎯 Anúncios ativos: *${fmt(a.ads)}*`,
+    `🎬 Criativos na oferta: *${a.creatives || 1}*${a.copies > 1 ? ` (o principal duplicado em ${a.copies} conjuntos)` : ''}`,
+    `⏳ No ar há: *${a.days} dias*`,
+    f.platform || f.price ? `💳 Checkout: *${[f.platform, f.price].filter(Boolean).join(' · ')}*` : null,
+    f.type ? `🧭 Funil: ${f.type}` : a.destino === 'whatsapp' ? '🧭 Funil: X1 no WhatsApp' : null,
+    '',
+    `🔗 Ver o anúncio: ${a.library}`,
+    a.pageLib ? `📚 Todos os anúncios dele: ${a.pageLib}` : null,
+    a.landing && !/whatsapp\.com|wa\.me/.test(a.landing) ? `🌐 Página da oferta: ${a.landing}` : null,
+    '',
+    `🧠 *Análise completa grátis* (VSL, mecanismo, funil e +1.000 ofertas): ${site}/app/?teste=1`,
+  ];
+  return linhas.filter((l) => l !== null).join('\n');
 }
 
 function bastidores(p, site) {
