@@ -27,30 +27,46 @@ const FLAG = { BR: '🇧🇷', US: '🇺🇸', MX: '🇲🇽', ES: '🇪🇸', C
 const semaforo = (n) => (n >= 65 ? ['🟢', 'ALTA — vende'] : n >= 40 ? ['🟡', 'MÉDIA — em validação'] : ['🔴', 'BAIXA — só para estudo']);
 const barra = (n) => '▰'.repeat(Math.round(n / 10)) + '▱'.repeat(10 - Math.round(n / 10));
 
-function offerCaption(a, kind, site) {
+const GANCHO = {
+  relatorio: (a) => `Enquanto você rolava o feed, *${a.page}* completou *${a.days} dias* no ar${a.copies > 1 ? ` com o mesmo criativo rodando em *${a.copies} conjuntos*` : ''}. Ninguém paga ${a.days} dias de anúncio no prejuízo.`,
+  gringa: (a) => `Isso está vendendo agora em ${PAIS[a.country] || a.country} — *${a.days} dias* no ar${a.copies > 1 ? `, criativo duplicado em *${a.copies} conjuntos*` : ''}. O que escala lá fora chega aqui em semanas: quem traduz e modela primeiro, fatura primeiro.`,
+  cloaker: (a) => `O revisor da Meta vê uma página. O comprador vê outra. O robô entrou como lead real e trouxe a página de verdade dessa oferta, no ar há *${a.days} dias*.`,
+};
+
+function offerCaption(a, kind, site, pulse = {}) {
   const f = a.funnel || {};
   const [cor, rotulo] = semaforo(a.profit || 0);
   const escala = a.scale ?? 0;
-  const titulo = kind === 'gringa' ? `*OFERTA GRINGA* ${FLAG[a.country] || ''} ${PAIS[a.country] || a.country}` : kind === 'cloaker' && f.finalUrl ? '*CLOAKER QUEBRADO* — página real abaixo' : `*OFERTA DO DIA* ${FLAG[a.country] || ''}`;
+  const titulo = kind === 'gringa' ? `${cor} *OFERTA GRINGA* ${FLAG[a.country] || ''} ${PAIS[a.country] || a.country}` : kind === 'cloaker' && f.finalUrl ? `${cor} *CLOAKER QUEBRADO* ${FLAG[a.country] || ''}` : `${cor} *OFERTA DO DIA* ${FLAG[a.country] || ''}`;
+  const why = (a.why || []).slice(0, 3);
   const linhas = [
     titulo,
     '',
-    `${cor} *CHANCE DE VENDA: ${a.profit}/100* · ${rotulo}`,
-    `${barra(a.profit || 0)}`,
-    `📈 *Escala:* ${escala}/100  ${barra(escala)}`,
+    (GANCHO[kind] || GANCHO.relatorio)(a),
     '',
-    `🏷️ *${a.page}* · ${a.nicheLabel}`,
+    '📊 *RAIO-X DA OFERTA*',
+    `${cor} Chance de venda: *${a.profit}/100* · ${rotulo}`,
+    barra(a.profit || 0),
+    `📈 Escala: *${escala}/100*  ${barra(escala)}`,
+    `🏷️ Anunciante: *${a.page}*`,
+    `🗂️ Nicho: ${a.nicheLabel}`,
     `🎯 Anúncios ativos: *${fmt(a.ads)}*`,
-    `🎬 Criativos na oferta: *${a.creatives || 1}*${a.copies > 1 ? ` (o principal duplicado em ${a.copies} conjuntos)` : ''}`,
+    `🎬 Criativos na oferta: *${a.creatives || 1}*${a.copies > 1 ? ` · principal duplicado em ${a.copies} conjuntos` : ''}`,
     `⏳ No ar há: *${a.days} dias*`,
     f.platform || f.price ? `💳 Checkout: *${[f.platform, f.price].filter(Boolean).join(' · ')}*` : null,
-    f.type ? `🧭 Funil: ${f.type}` : a.destino === 'whatsapp' ? '🧭 Funil: X1 no WhatsApp' : null,
+    f.type ? `🧭 Funil: *${f.type}*` : a.destino === 'whatsapp' ? '🧭 Funil: *X1 no WhatsApp* (venda na conversa)' : null,
+    why.length ? '' : null,
+    why.length ? '💡 *POR QUE ESSA OFERTA VENDE*' : null,
+    ...why.map((w) => '• ' + w),
     '',
-    `🔗 Ver o anúncio: ${a.library}`,
-    a.pageLib ? `📚 Todos os anúncios dele: ${a.pageLib}` : null,
-    a.landing && !/whatsapp\.com|wa\.me/.test(a.landing) ? `🌐 Página da oferta: ${a.landing}` : null,
+    '🔗 *LINKS*',
+    `▸ Ver o anúncio: ${a.library}`,
+    a.pageLib ? `▸ Todos os anúncios dele: ${a.pageLib}` : null,
+    a.landing && !/whatsapp\.com|wa\.me/.test(a.landing) ? `▸ Página da oferta: ${a.landing}` : null,
     '',
-    `🧠 *Análise completa grátis* (VSL, mecanismo, funil e +1.000 ofertas): ${site}/app/?teste=1`,
+    '━━━━━━━━━━━━━━━',
+    pulse.lidos ? `🤖 *Nas últimas 24h o robô do Oracle leu ${fmt(pulse.lidos)} ofertas* — ${fmt(pulse.lucro)} com chance de venda alta. Aqui no grupo cai uma por hora. No app você vê *todas*, filtra por nicho e país, baixa o vídeo em HD, quebra a VSL e o cloaker.` : '🤖 Aqui no grupo cai uma por hora. No app você vê *todas*, filtra por nicho e país, baixa o vídeo em HD, quebra a VSL e o cloaker.',
+    `👉 *Teste grátis 30 min:* ${site}/app/?teste=1`,
   ];
   return linhas.filter((l) => l !== null).join('\n');
 }

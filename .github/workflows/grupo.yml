@@ -4,18 +4,20 @@ on:
   schedule:
     - cron: "0 11-23,0 * * *"   # de hora em hora, 8h às 21h (Brasília)
   workflow_dispatch:
+    inputs:
+      qtd: { description: "Quantos posts seguidos (1 = normal)", default: "1" }
 
 concurrency: { group: whatsapp, cancel-in-progress: false }
 
 jobs:
   postar:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 12
     defaults: { run: { working-directory: bot-grupo } }
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: "20" }
       - run: npm ci --omit=dev
-      - run: node src/post.js
-        env: { DATABASE_URL: "${{ secrets.DATABASE_URL }}", SITE: "https://oracle-ads.vercel.app" }
+      - run: if [ "${QTD:-1}" -gt 1 ]; then node src/rodada-teste.js; else node src/post.js; fi
+        env: { DATABASE_URL: "${{ secrets.DATABASE_URL }}", SITE: "https://oracle-ads.vercel.app", QTD: "${{ github.event.inputs.qtd }}" }

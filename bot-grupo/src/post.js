@@ -25,9 +25,9 @@ async function build(st) {
   };
   // ofertas: só uma foto pequena (o próprio criativo) e os dados escritos na legenda, com links
   const small = (a) => a.image || cardUrl({ id: a.id });
-  if (kind === 'relatorio') { const a = await offer('&lang=pt&br=1', '&lang=pt'); return { kind, image: small(a), caption: offerCaption(a, kind, SITE) }; }
-  if (kind === 'gringa') { const a = await offer('&abroad=1'); return { kind, image: small(a), caption: offerCaption(a, kind, SITE) }; }
-  if (kind === 'cloaker') { const a = await offer('&funnel=1', '&lang=pt'); return { kind, image: small(a), caption: offerCaption(a, a.funnel?.finalUrl ? 'cloaker' : 'relatorio', SITE) }; }
+  if (kind === 'relatorio') { const a = await offer('&lang=pt&br=1', '&lang=pt'); return { kind, image: small(a), caption: offerCaption(a, kind, SITE, pulse) }; }
+  if (kind === 'gringa') { const a = await offer('&abroad=1'); return { kind, image: small(a), caption: offerCaption(a, kind, SITE, pulse) }; }
+  if (kind === 'cloaker') { const a = await offer('&funnel=1', '&lang=pt'); return { kind, image: small(a), caption: offerCaption(a, a.funnel?.finalUrl ? 'cloaker' : 'relatorio', SITE, pulse) }; }
   if (kind === 'licao') { const l = LICOES[(st.licao = (st.licao || 0) + 1) % LICOES.length]; return { kind, image: cardUrl({ t: 'promo', h: l.h, s: l.s, k: 'INTELIGÊNCIA DE OFERTAS' }), caption: l.t(pulse) }; }
   if (kind === 'bastidores') { const b = bastidores(pulse, SITE); return { kind, image: cardUrl({ t: 'promo', ...b.card }), caption: b.text }; }
   const c = convite(SITE); return { kind, image: cardUrl({ t: 'promo', ...c.card }), caption: c.text };
@@ -38,7 +38,7 @@ async function connect() {
   const { version } = await fetchLatestBaileysVersion().catch(() => ({ version: undefined }));
   const { useDbAuthState } = require('./db-auth');
   const { state, saveCreds } = await useDbAuthState();
-  if (!state.creds.registered) throw new Error('WhatsApp ainda não pareado — use o painel do dono › WhatsApp do bot');
+  if (!state.creds.me?.id) throw new Error('WhatsApp ainda não pareado — use o painel do dono › WhatsApp do bot'); // pelo QR o 'registered' fica falso: o que vale é ter a conta (me)
   const sock = makeWASocket({ version, auth: state, browser: Browsers.ubuntu('Chrome'), logger: pino({ level: 'silent' }), syncFullHistory: false, markOnlineOnConnect: false, connectTimeoutMs: 60000 });
   sock.ev.on('creds.update', saveCreds);
   await new Promise((res, rej) => {
