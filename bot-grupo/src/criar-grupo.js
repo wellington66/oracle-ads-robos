@@ -46,10 +46,11 @@ Ative as notificações deste grupo. A próxima oferta pode ser a sua.
 ${SITE}`;
 
 (async () => {
-  const { default: makeWASocket } = require('@whiskeysockets/baileys');
+  const { default: makeWASocket, Browsers, fetchLatestBaileysVersion } = require('@whiskeysockets/baileys');
+  const { version } = await fetchLatestBaileysVersion().catch(() => ({ version: undefined }));
   const { state, saveCreds } = await useDbAuthState();
   if (!state.creds.registered) throw new Error('WhatsApp do bot ainda não pareado.');
-  const sock = makeWASocket({ auth: state, logger: pino({ level: 'silent' }), syncFullHistory: false, markOnlineOnConnect: false });
+  const sock = makeWASocket({ version, auth: state, browser: Browsers.ubuntu('Chrome'), logger: pino({ level: 'silent' }), syncFullHistory: false, markOnlineOnConnect: false, connectTimeoutMs: 60000 });
   sock.ev.on('creds.update', saveCreds);
   await new Promise((res, rej) => {
     const t = setTimeout(() => rej(new Error('timeout ao conectar')), 60000);

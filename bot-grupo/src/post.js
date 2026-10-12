@@ -33,11 +33,12 @@ async function build(st) {
 }
 
 async function connect() {
-  const { default: makeWASocket, DisconnectReason } = require('@whiskeysockets/baileys');
+  const { default: makeWASocket, Browsers, fetchLatestBaileysVersion } = require('@whiskeysockets/baileys');
+  const { version } = await fetchLatestBaileysVersion().catch(() => ({ version: undefined }));
   const { useDbAuthState } = require('./db-auth');
   const { state, saveCreds } = await useDbAuthState();
   if (!state.creds.registered) throw new Error('WhatsApp ainda não pareado — use o painel do dono › Grupo de WhatsApp');
-  const sock = makeWASocket({ auth: state, logger: pino({ level: 'silent' }), syncFullHistory: false, markOnlineOnConnect: false });
+  const sock = makeWASocket({ version, auth: state, browser: Browsers.ubuntu('Chrome'), logger: pino({ level: 'silent' }), syncFullHistory: false, markOnlineOnConnect: false, connectTimeoutMs: 60000 });
   sock.ev.on('creds.update', saveCreds);
   await new Promise((res, rej) => {
     const t = setTimeout(() => rej(new Error('timeout ao conectar')), 60000);

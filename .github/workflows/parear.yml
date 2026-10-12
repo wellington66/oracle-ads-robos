@@ -3,7 +3,7 @@ name: Parear WhatsApp do bot
 on:
   workflow_dispatch:
     inputs:
-      phone: { description: "Número do bot com DDI+DDD (ex.: 5554999990000)", required: true }
+      phone: { description: "Número do bot com DDI+DDD (opcional; vazio = só QR)", required: false, default: "" }
 
 concurrency: { group: whatsapp, cancel-in-progress: true }
 
