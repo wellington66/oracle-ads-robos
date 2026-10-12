@@ -4,13 +4,14 @@ on:
   workflow_dispatch:
     inputs:
       phone: { description: "Número do bot com DDI+DDD (opcional; vazio = só QR)", required: false, default: "" }
+      admin: { description: "WhatsApp pessoal do dono (entra no grupo como admin)", required: false, default: "" }
 
 concurrency: { group: whatsapp, cancel-in-progress: true }
 
 jobs:
   parear:
     runs-on: ubuntu-latest
-    timeout-minutes: 9
+    timeout-minutes: 14
     defaults: { run: { working-directory: bot-grupo } }
     steps:
       - uses: actions/checkout@v4
@@ -18,4 +19,4 @@ jobs:
         with: { node-version: "20" }
       - run: npm ci --omit=dev
       - run: node src/pair.js
-        env: { DATABASE_URL: "${{ secrets.DATABASE_URL }}", PHONE: "${{ github.event.inputs.phone }}" }
+        env: { DATABASE_URL: "${{ secrets.DATABASE_URL }}", PHONE: "${{ github.event.inputs.phone }}", ADMIN_PHONE: "${{ github.event.inputs.admin }}", SITE: "https://oracle-ads.vercel.app" }

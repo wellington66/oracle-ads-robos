@@ -14,7 +14,7 @@ async function schema() {
 const read = async (id) => { const [r] = await sql`SELECT value FROM g_wa_keys WHERE id = ${id}`; return r ? JSON.parse(r.value, BufferJSON.reviver) : null; };
 const write = (id, v) => sql`INSERT INTO g_wa_keys (id, value, updated_at) VALUES (${id}, ${JSON.stringify(v, BufferJSON.replacer)}, now())
   ON CONFLICT (id) DO UPDATE SET value = EXCLUDED.value, updated_at = now()`;
-const del = (id) => sql`DELETE FROM g_wa_keys WHERE id = ${id}`;
+const del = (id) => sql`DELETE FROM g_wa_keys WHERE id = ${id}`.then(() => {});
 
 async function useDbAuthState() {
   await schema();
@@ -39,7 +39,8 @@ async function useDbAuthState() {
         },
       },
     },
-    saveCreds: () => write('creds', creds),
+    // a consulta do Neon só executa quando aguardada — por isso o await (sem ele a sessão nunca era salva)
+    saveCreds: async () => { try { await write('creds', creds); } catch (e) { console.error('falha ao salvar sessão:', e.message); } },
     wipe: () => sql`DELETE FROM g_wa_keys`,
   };
 }

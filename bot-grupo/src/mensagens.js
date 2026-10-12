@@ -7,7 +7,7 @@ const hoje = () => new Date().toLocaleDateString('pt-BR', { timeZone: 'America/S
 const host = (u) => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch { return ''; } };
 
 // ordem da semana (repete): 7 posts por dia
-const ROTA = ['relatorio', 'licao', 'gringa', 'cloaker', 'bastidores', 'relatorio', 'convite'];
+const ROTA = ['relatorio', 'gringa', 'relatorio', 'licao', 'gringa', 'cloaker', 'relatorio', 'gringa', 'bastidores', 'relatorio', 'gringa', 'convite'];
 
 const LICOES = [
   { h: 'Como saber se um anúncio dá lucro sem ver o painel dele', s: 'Três sinais públicos que os grandes usam antes de modelar qualquer oferta.',
@@ -31,7 +31,7 @@ function offerCaption(a, kind, site) {
   if (kind === 'cloaker') {
     return `*CLOAKER QUEBRADO* · ${hoje()}\n\nAnúncio de *${a.page}* (${fmt(a.ads)} anúncios ativos, ${a.days} dias no ar).\n\nAbrindo como lead real — celular, vindo do Facebook — o destino é:\n▸ *${host(f.finalUrl)}*${f.type ? ' · ' + f.type : ''}\n▸ Checkout: ${f.platform || 'não exposto na página'}${f.price ? '\n▸ Ticket: ' + f.price : ''}\n\nÍndice de Lucro *${a.profit}/100*. A estrutura completa (VSL, mecanismo e oferta) fica no radar.`;
   }
-  return `*RELATÓRIO DE OFERTA* · ${hoje()}\n\n*${a.page}* está rodando *${fmt(a.ads)} anúncios* ao mesmo tempo. O criativo principal foi duplicado em *${a.copies} conjuntos* e está no ar há *${a.days} dias*.\n\nNinguém mantém anúncio no prejuízo por ${a.days} dias. Ninguém duplica criativo que não converte.\n\n▸ Nicho: ${a.nicheLabel}\n▸ Índice de Lucro: *${a.profit}/100* (${a.roi})${linhaPag}\n\nOs dados são públicos. O difícil é achar antes de saturar — o radar faz isso sozinho, a cada hora.`;
+  return `*RELATÓRIO DE OFERTA* · ${hoje()}\n\n*${a.page}* está rodando *${fmt(a.ads)} anúncios* ao mesmo tempo. O criativo principal foi duplicado em *${a.copies} conjuntos* e está no ar há *${a.days} dias*.\n\nAinda não é anunciante gigante — é a janela para modelar *antes* de saturar. Ninguém mantém anúncio no prejuízo por ${a.days} dias.\n\n▸ Nicho: ${a.nicheLabel}\n▸ Índice de Lucro: *${a.profit}/100* (${a.roi})${linhaPag}\n\nOs dados são públicos. O difícil é achar antes de saturar — o radar faz isso sozinho, a cada hora.`;
 }
 
 function bastidores(p, site) {

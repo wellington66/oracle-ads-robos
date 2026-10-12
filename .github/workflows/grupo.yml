@@ -2,7 +2,7 @@ name: Bot do grupo (WhatsApp)
 
 on:
   schedule:
-    - cron: "0 11,13,15,17,19,21,23 * * *"   # 8h às 20h (Brasília), a cada 2h
+    - cron: "0 11-23,0 * * *"   # de hora em hora, 8h às 21h (Brasília)
   workflow_dispatch:
 
 concurrency: { group: whatsapp, cancel-in-progress: false }

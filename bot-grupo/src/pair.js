@@ -34,10 +34,26 @@ const LIMITE = 8 * 60000;
         console.log('QR atualizado');
       }
       if (connection === 'open') {
+        if (done) return;
         done = true;
+        await auth.saveCreds();
         await setKV('status', { ok: true, paired: true, at: new Date().toISOString() });
         await save({ qr: null, code: null });
-        console.log('✅ Pareado');
+        console.log('✅ Pareado como', sock.user?.id);
+        // tudo automático a partir daqui: perfil profissional, grupo pronto e a primeira oferta
+        try {
+          await new Promise((r) => setTimeout(r, 8000));
+          const { perfil, criarGrupo } = require('./setup');
+          const { postOnce } = require('./post');
+          await perfil(sock);
+          await criarGrupo(sock, String(process.env.ADMIN_PHONE || '').replace(/\D/g, ''));
+          await new Promise((r) => setTimeout(r, 4000));
+          await postOnce(sock);
+        } catch (e) {
+          console.error('configuração automática:', e.message);
+          await setKV('status', { ok: true, paired: true, at: new Date().toISOString(), error: 'Pareado, mas a configuração parou: ' + e.message + ' — clique em "Criar grupo agora".' });
+        }
+        await auth.saveCreds();
         setTimeout(() => process.exit(0), 6000);
       }
       if (connection === 'close' && !done) {

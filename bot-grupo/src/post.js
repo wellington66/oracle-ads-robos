@@ -1,33 +1,32 @@
-// Uma postagem e encerra (roda no GitHub Actions a cada ~2h — nada fica ligado em computador nenhum).
-// DRY_RUN=1: monta o post e mostra no terminal, sem conectar no WhatsApp.
+// Uma postagem e encerra (GitHub Actions a cada hora, 8h às 21h — nada fica ligado em computador nenhum).
+// DRY_RUN=1: monta o post e mostra no terminal, sem conectar no WhatsApp. SEQ=n força a posição na sequência.
 const pino = require('pino');
 const { ROTA, LICOES, offerCaption, bastidores, convite } = require('./mensagens');
 const { getKV, setKV } = require('./db-auth');
 
 const SITE = (process.env.SITE || 'https://oracle-ads.vercel.app').replace(/\/$/, '');
 const DRY = process.env.DRY_RUN === '1';
+const MAX_ADS = 30; // nada de anunciante gigante: até 30 anúncios ativos — oferta que dá para modelar
 const cardUrl = (q) => `${SITE}/api/card?${new URLSearchParams(q)}&v=${Date.now() % 1e6}`;
 
 async function api(path) { const r = await fetch(SITE + path); if (!r.ok) throw new Error(path + ' -> ' + r.status); return r.json(); }
 
 async function build(st) {
   const kind = ROTA[st.seq % ROTA.length];
-  const skip = encodeURIComponent((st.recent || []).slice(-200).join(','));
-  const pages = encodeURIComponent((st.pages || []).slice(-30).join('|'));
+  const skip = encodeURIComponent((st.recent || []).slice(-300).join(','));
+  const pages = encodeURIComponent((st.pages || []).slice(-40).join('|'));
   const pulse = await api('/api/public?a=pulse');
-  const offer = async (extra) => {
-    let a;
-    try { a = await api(`/api/public?a=teaser&skip=${skip}&pages=${pages}${extra}`); } catch { a = await api(`/api/public?a=teaser&skip=${skip}&pages=${pages}`); }
-    st.recent = [...(st.recent || []), a.id].slice(-300); st.pages = [...(st.pages || []), a.page].slice(-40);
+  const offer = async (...tries) => {
+    let a = null;
+    for (const extra of [...tries, '']) { try { a = await api(`/api/public?a=teaser&max=${MAX_ADS}&skip=${skip}&pages=${pages}${extra}`); break; } catch {} }
+    if (!a) a = await api(`/api/public?a=teaser&skip=${skip}`);
+    st.recent = [...(st.recent || []), a.id].slice(-400); st.pages = [...(st.pages || []), a.page].slice(-60);
     return a;
   };
-  if (kind === 'relatorio') { const a = await offer('&lang=pt'); return { kind, image: cardUrl({ id: a.id }), caption: offerCaption(a, kind, SITE) }; }
+  if (kind === 'relatorio') { const a = await offer('&lang=pt&br=1', '&lang=pt'); return { kind, image: cardUrl({ id: a.id }), caption: offerCaption(a, kind, SITE) }; }
   if (kind === 'gringa') { const a = await offer('&abroad=1'); return { kind, image: cardUrl({ id: a.id }), caption: offerCaption(a, kind, SITE) }; }
-  if (kind === 'cloaker') {
-    const a = await offer('&funnel=1');
-    return { kind, image: cardUrl({ id: a.id }), caption: offerCaption(a, a.funnel?.finalUrl ? 'cloaker' : 'relatorio', SITE) };
-  }
-  if (kind === 'licao') { const l = LICOES[(st.licao = ((st.licao || 0) + 1)) % LICOES.length]; return { kind, image: cardUrl({ t: 'promo', h: l.h, s: l.s, k: 'INTELIGÊNCIA DE OFERTAS' }), caption: l.t(pulse) }; }
+  if (kind === 'cloaker') { const a = await offer('&funnel=1', '&lang=pt'); return { kind, image: cardUrl({ id: a.id }), caption: offerCaption(a, a.funnel?.finalUrl ? 'cloaker' : 'relatorio', SITE) }; }
+  if (kind === 'licao') { const l = LICOES[(st.licao = (st.licao || 0) + 1) % LICOES.length]; return { kind, image: cardUrl({ t: 'promo', h: l.h, s: l.s, k: 'INTELIGÊNCIA DE OFERTAS' }), caption: l.t(pulse) }; }
   if (kind === 'bastidores') { const b = bastidores(pulse, SITE); return { kind, image: cardUrl({ t: 'promo', ...b.card }), caption: b.text }; }
   const c = convite(SITE); return { kind, image: cardUrl({ t: 'promo', ...c.card }), caption: c.text };
 }
@@ -37,7 +36,7 @@ async function connect() {
   const { version } = await fetchLatestBaileysVersion().catch(() => ({ version: undefined }));
   const { useDbAuthState } = require('./db-auth');
   const { state, saveCreds } = await useDbAuthState();
-  if (!state.creds.registered) throw new Error('WhatsApp ainda não pareado — use o painel do dono › Grupo de WhatsApp');
+  if (!state.creds.registered) throw new Error('WhatsApp ainda não pareado — use o painel do dono › WhatsApp do bot');
   const sock = makeWASocket({ version, auth: state, browser: Browsers.ubuntu('Chrome'), logger: pino({ level: 'silent' }), syncFullHistory: false, markOnlineOnConnect: false, connectTimeoutMs: 60000 });
   sock.ev.on('creds.update', saveCreds);
   await new Promise((res, rej) => {
@@ -59,29 +58,34 @@ async function groups(sock, cfg) {
   return list.filter((g) => name && g.subject.trim().toLowerCase() === name).map((g) => g.id);
 }
 
-(async () => {
+/** posta o próximo item da sequência nos grupos configurados (usa um socket já conectado) */
+async function postOnce(sock) {
   const st = await getKV('state', { seq: 0 });
   const cfg = await getKV('config', {});
-  if (DRY && process.env.SEQ) st.seq = +process.env.SEQ;
-  if (!DRY && cfg.paused) return console.log('Bot pausado no painel.');
+  if (cfg.paused) { console.log('Bot pausado no painel.'); return null; }
   const post = await build(st);
-  console.log(`[${post.kind}] ${post.image}\n\n${post.caption}\n`);
-  if (DRY) { st.seq++; return; }
-  const sock = await connect();
-  try {
-    const ids = await groups(sock, cfg);
-    if (!ids.length) throw new Error('Nenhum grupo configurado/encontrado (veja no painel a lista de grupos do número).');
-    for (const g of ids) { await sock.sendMessage(g, { image: { url: post.image }, caption: post.caption }); await new Promise((r) => setTimeout(r, 3000)); }
-    st.seq++; st.last = new Date().toISOString(); st.lastKind = post.kind;
-    await setKV('state', st);
-    await setKV('status', { ok: true, at: st.last, kind: post.kind, groups: ids.length });
-    console.log('✅ postado em', ids.length, 'grupo(s)');
-  } catch (e) {
-    await setKV('status', { ok: false, at: new Date().toISOString(), error: e.message });
-    throw e;
-  } finally {
-    await new Promise((r) => setTimeout(r, 4000));
-    sock.end(undefined);
+  const ids = await groups(sock, cfg);
+  if (!ids.length) throw new Error('Nenhum grupo configurado/encontrado.');
+  for (const g of ids) { await sock.sendMessage(g, { image: { url: post.image }, caption: post.caption }); await new Promise((r) => setTimeout(r, 3000)); }
+  st.seq++; st.last = new Date().toISOString(); st.lastKind = post.kind;
+  await setKV('state', st);
+  await setKV('status', { ok: true, at: st.last, kind: post.kind, groups: ids.length });
+  console.log('✅ postado:', post.kind, 'em', ids.length, 'grupo(s)');
+  return post;
+}
+
+async function main() {
+  if (DRY) {
+    const st = await getKV('state', { seq: 0 });
+    if (process.env.SEQ) st.seq = +process.env.SEQ;
+    const post = await build(st);
+    return console.log(`[${post.kind}] ${post.image}\n\n${post.caption}\n`);
   }
-  process.exit(0);
-})().catch((e) => { console.error('❌', e.message); process.exit(1); });
+  const sock = await connect();
+  try { await postOnce(sock); }
+  catch (e) { await setKV('status', { ok: false, at: new Date().toISOString(), error: e.message }); throw e; }
+  finally { await new Promise((r) => setTimeout(r, 5000)); sock.end(undefined); }
+}
+
+module.exports = { postOnce, connect, build };
+if (require.main === module) main().then(() => process.exit(0)).catch((e) => { console.error('❌', e.message); process.exit(1); });
