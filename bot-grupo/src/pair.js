@@ -12,6 +12,7 @@ const LIMITE = 8 * 60000;
   const { version } = await fetchLatestBaileysVersion().catch(() => ({ version: undefined }));
   console.log('Versão do WhatsApp Web:', version ? version.join('.') : 'padrão');
   const old = await useDbAuthState(); await old.wipe();
+  await setKV('status', { ok: false, pairing: true, at: new Date().toISOString() }); // nova conexão: esquece a anterior
   const auth = await useDbAuthState();
   let done = false, code = null, requested = false, tries = 0;
   const save = (extra) => setKV('pairing', { phone: PHONE, code, done, at: new Date().toISOString(), ...extra });
