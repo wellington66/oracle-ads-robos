@@ -26,7 +26,8 @@ const FLAG = { BR: '🇧🇷', US: '🇺🇸', MX: '🇲🇽', ES: '🇪🇸', C
 /** chance de venda (Índice de Lucro) em semáforo: vermelho ruim, amarelo mais ou menos, verde vende */
 // classificação pelo nº de anúncios ativos do anunciante (🔴 só quando a chance de venda é fraca)
 const faixa = (ads, profit) => (profit < 35 ? ['🔴', 'FRACA — só para estudo'] : ads >= 50 ? ['🔥', 'MAIS ESCALADA — 50+ anúncios'] : ads >= 30 ? ['🟢', 'BOA — 30+ anúncios, vendendo'] : ['🟡', 'MÉDIA — validando, entre cedo']);
-const tipo = (a) => (a.ptype === 'fisico' ? '📦 Produto físico · dá para fazer drop' : ['suplementos', 'saude', 'emagrecimento', 'masculino', 'beleza'].includes(a.niche) ? '💊 Nutra' : '💸 Infoproduto low ticket');
+const NUTRA = ['suplementos', 'saude', 'emagrecimento', 'masculino', 'beleza'];
+const tipo = (a) => (NUTRA.includes(a.nicheKey) ? (a.ptype === 'fisico' ? '💊 Nutra · produto físico' : '💊 Nutra') : a.ptype === 'fisico' ? '📦 Produto físico · dá para fazer drop' : '💸 Infoproduto low ticket');
 const barra = (n) => '▰'.repeat(Math.round(n / 10)) + '▱'.repeat(10 - Math.round(n / 10));
 
 const GANCHO = {

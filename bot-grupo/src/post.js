@@ -11,18 +11,22 @@ const cardUrl = (q) => `${SITE}/api/card?${new URLSearchParams(q)}&v=${Date.now(
 
 async function api(path) { const r = await fetch(SITE + path); if (!r.ok) throw new Error(path + ' -> ' + r.status); return r.json(); }
 
-async function build(st) {
-  const kind = ROTA[st.seq % ROTA.length];
+async function build(st, cfg = {}) {
+  let kind = ROTA[st.seq % ROTA.length];
+  // % Brasil × gringa ajustável no painel
+  if ((kind === 'relatorio' || kind === 'gringa') && cfg.brShare != null) kind = Math.random() * 100 < cfg.brShare ? 'relatorio' : 'gringa';
   const skip = encodeURIComponent((st.recent || []).slice(-300).join(','));
   const pages = encodeURIComponent((st.pages || []).slice(-40).join('|'));
   const pulse = await api('/api/public?a=pulse');
   // faixa sorteada: metade médias (até 29 anúncios), um terço boas (30-49), às vezes uma das mais escaladas (50+)
-  const r = Math.random(), tier = r < 0.5 ? 'media' : r < 0.85 ? 'boa' : 'top';
+  const pm = cfg.media ?? 50, pb = cfg.boa ?? 35, pt = cfg.top ?? 15, tot = Math.max(1, pm + pb + pt);
+  const r = Math.random() * tot, tier = r < pm ? 'media' : r < pm + pb ? 'boa' : 'top';
+  const foco = cfg.focus === false ? '0' : '1';
   const ordem = { media: ['media', 'boa', 'top'], boa: ['boa', 'media', 'top'], top: ['top', 'boa', 'media'] }[tier];
   const offer = async (...tries) => {
     let a = null;
     for (const t of ordem) {
-      for (const extra of [...tries, '']) { try { a = await api(`/api/public?a=teaser&focus=1&tier=${t}&skip=${skip}&pages=${pages}${extra}`); break; } catch {} }
+      for (const extra of [...tries, '']) { try { a = await api(`/api/public?a=teaser&focus=${foco}&tier=${t}&skip=${skip}&pages=${pages}${extra}`); break; } catch {} }
       if (a) break;
     }
     if (!a) a = await api(`/api/public?a=teaser&max=${MAX_ADS}&skip=${skip}&pages=${pages}`).catch(() => api(`/api/public?a=teaser&skip=${skip}`));
@@ -71,7 +75,7 @@ async function postOnce(sock) {
   const st = await getKV('state', { seq: 0 });
   const cfg = await getKV('config', {});
   if (cfg.paused) { console.log('Bot pausado no painel.'); return null; }
-  const post = await build(st);
+  const post = await build(st, await getKV('bot_settings', {}));
   const ids = await groups(sock, cfg);
   if (!ids.length) throw new Error('Nenhum grupo configurado/encontrado.');
   for (const g of ids) { await sock.sendMessage(g, { image: { url: post.image }, caption: post.caption }); await new Promise((r) => setTimeout(r, 3000)); }
@@ -86,9 +90,14 @@ async function main() {
   if (DRY) {
     const st = await getKV('state', { seq: 0 });
     if (process.env.SEQ) st.seq = +process.env.SEQ;
-    const post = await build(st);
+    const post = await build(st, await getKV('bot_settings', {}));
     return console.log(`[${post.kind}] ${post.image}\n\n${post.caption}\n`);
   }
+  // horário e intervalo ajustáveis no painel (o agendador roda de hora em hora)
+  const bs = await getKV('bot_settings', {}), st0 = await getKV('state', {});
+  const h = +new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo', hour: 'numeric', hour12: false });
+  if (!process.env.FORCE && (h < (bs.startH ?? 8) || h >= (bs.endH ?? 22))) return console.log('Fora do horário de postagem.');
+  if (!process.env.FORCE && st0.last && Date.now() - new Date(st0.last) < (bs.gapMin ?? 55) * 60000) return console.log('Ainda não deu o intervalo entre posts.');
   const sock = await connect();
   try { await postOnce(sock); }
   catch (e) { await setKV('status', { ok: false, at: new Date().toISOString(), error: e.message }); throw e; }

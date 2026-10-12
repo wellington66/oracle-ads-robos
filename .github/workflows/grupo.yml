@@ -20,4 +20,4 @@ jobs:
         with: { node-version: "20" }
       - run: npm ci --omit=dev
       - run: if [ "${QTD:-1}" -gt 1 ]; then node src/rodada-teste.js; else node src/post.js; fi
-        env: { DATABASE_URL: "${{ secrets.DATABASE_URL }}", SITE: "https://oracle-ads.vercel.app", QTD: "${{ github.event.inputs.qtd }}" }
+        env: { DATABASE_URL: "${{ secrets.DATABASE_URL }}", SITE: "https://oracle-ads.vercel.app", QTD: "${{ github.event.inputs.qtd }}", FORCE: "${{ github.event_name == 'workflow_dispatch' && '1' || '' }}" }
